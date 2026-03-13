@@ -14,6 +14,7 @@ const boardCtx = boardEl.getContext("2d");
 const scoreEl = document.getElementById("score");
 const statusEl = document.getElementById("status");
 const difficultyEl = document.getElementById("difficulty");
+const snakeColorEl = document.getElementById("snake-color");
 const restartBtn = document.getElementById("restart");
 const pauseBtn = document.getElementById("pause");
 const mobileButtons = document.querySelectorAll("[data-dir]");
@@ -39,6 +40,12 @@ const DIFFICULTY_TICKS = {
   hard: 95,
 };
 
+const SNAKE_COLORS = {
+  current: "#2d7d3e",
+  blue: "#1f6ed4",
+  violet: "#6a42c2",
+};
+
 if (!boardCtx) {
   throw new Error("2D canvas context is required.");
 }
@@ -46,6 +53,11 @@ if (!boardCtx) {
 function getTickMs() {
   const selected = difficultyEl?.value || "medium";
   return DIFFICULTY_TICKS[selected] ?? DIFFICULTY_TICKS.medium;
+}
+
+function getSnakeColor() {
+  const selected = snakeColorEl?.value || "current";
+  return SNAKE_COLORS[selected] ?? SNAKE_COLORS.current;
 }
 
 let audioContext = null;
@@ -175,10 +187,11 @@ function render(alpha = 1) {
     drawCircleAt(state.food, "#c22", 0.34);
   }
 
+  const snakeColor = getSnakeColor();
   for (let i = state.snake.length - 1; i >= 0; i -= 1) {
     const pos = snakeSegmentPosition(i, alpha);
     if (pos) {
-      drawCircleAt(pos, "#2d7d3e");
+      drawCircleAt(pos, snakeColor);
     }
   }
 }
