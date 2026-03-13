@@ -10,6 +10,7 @@ const BOARD_WIDTH = 16;
 const BOARD_HEIGHT = 16;
 
 const boardEl = document.getElementById("board");
+const boardCtx = boardEl.getContext("2d");
 const scoreEl = document.getElementById("score");
 const statusEl = document.getElementById("status");
 const difficultyEl = document.getElementById("difficulty");
@@ -32,24 +33,34 @@ const DIR_FROM_KEY = {
   D: "right",
 };
 
-let audioContext = null;
-let state = createInitialState({
-  width: BOARD_WIDTH,
-  height: BOARD_HEIGHT,
-  seed: "snake-default",
-});
-let timerId = null;
-
 const DIFFICULTY_TICKS = {
   easy: 180,
   medium: 140,
   hard: 95,
 };
 
+if (!boardCtx) {
+  throw new Error("2D canvas context is required.");
+}
+
 function getTickMs() {
   const selected = difficultyEl?.value || "medium";
   return DIFFICULTY_TICKS[selected] ?? DIFFICULTY_TICKS.medium;
 }
+
+let audioContext = null;
+let state = createInitialState({
+  width: BOARD_WIDTH,
+  height: BOARD_HEIGHT,
+  seed: "snake-default",
+  tickMs: getTickMs(),
+});
+let previousSnake = state.snake.map((segment) => ({ ...segment }));
+let timerId = null;
+let lastStepAt = performance.now();
+
+boardEl.width = state.width * CELL_SIZE;
+boardEl.height = state.height * CELL_SIZE;
 
 function ensureAudioContext() {
   if (!audioContext) {
@@ -94,28 +105,7 @@ function playFailSound() {
   playTone({ frequency: 160, duration: 0.2, type: "sawtooth", gain: 0.05 });
 }
 
-boardEl.style.setProperty("--cols", String(state.width));
-boardEl.style.setProperty("--rows", String(state.height));
-boardEl.style.setProperty("--cell", `${CELL_SIZE}px`);
-
-function render() {
-  const snakeSet = new Set(state.snake.map((part) => `${part.x},${part.y}`));
-  boardEl.innerHTML = "";
-  for (let y = 0; y < state.height; y += 1) {
-    for (let x = 0; x < state.width; x += 1) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      const key = `${x},${y}`;
-      if (state.food && key === `${state.food.x},${state.food.y}`) {
-        cell.classList.add("food");
-      }
-      if (snakeSet.has(key)) {
-        cell.classList.add("snake");
-      }
-      boardEl.appendChild(cell);
-    }
-  }
-
+function updateHud() {
   scoreEl.textContent = String(state.score);
   if (state.gameOver) {
     statusEl.textContent = "Game Over";
@@ -129,6 +119,80 @@ function render() {
   }
 }
 
+function drawBoard() {
+  boardCtx.fillStyle = "#fff";
+  boardCtx.fillRect(0, 0, boardEl.width, boardEl.height);
+
+  boardCtx.strokeStyle = "#eeeeee";
+  boardCtx.lineWidth = 1;
+  for (let x = 1; x < state.width; x += 1) {
+    const px = x * CELL_SIZE + 0.5;
+    boardCtx.beginPath();
+    boardCtx.moveTo(px, 0);
+    boardCtx.lineTo(px, boardEl.height);
+    boardCtx.stroke();
+  }
+  for (let y = 1; y < state.height; y += 1) {
+    const py = y * CELL_SIZE + 0.5;
+    boardCtx.beginPath();
+    boardCtx.moveTo(0, py);
+    boardCtx.lineTo(boardEl.width, py);
+    boardCtx.stroke();
+  }
+}
+
+function drawCircleAt(position, color, radiusFactor = 0.42) {
+  const cx = (position.x + 0.5) * CELL_SIZE;
+  const cy = (position.y + 0.5) * CELL_SIZE;
+  const r = CELL_SIZE * radiusFactor;
+  boardCtx.fillStyle = color;
+  boardCtx.beginPath();
+  boardCtx.arc(cx, cy, r, 0, Math.PI * 2);
+  boardCtx.fill();
+}
+
+function snakeSegmentPosition(index, alpha) {
+  const current = state.snake[index];
+  if (!current) {
+    return null;
+  }
+  const from =
+    index === 0
+      ? previousSnake[0] || current
+      : previousSnake[index - 1] ||
+        previousSnake[previousSnake.length - 1] ||
+        current;
+  return {
+    x: from.x + (current.x - from.x) * alpha,
+    y: from.y + (current.y - from.y) * alpha,
+  };
+}
+
+function render(alpha = 1) {
+  drawBoard();
+
+  if (state.food) {
+    drawCircleAt(state.food, "#c22", 0.34);
+  }
+
+  for (let i = state.snake.length - 1; i >= 0; i -= 1) {
+    const pos = snakeSegmentPosition(i, alpha);
+    if (pos) {
+      drawCircleAt(pos, "#2d7d3e");
+    }
+  }
+}
+
+function animationFrame(now) {
+  const alpha =
+    state.paused || state.gameOver
+      ? 1
+      : Math.min((now - lastStepAt) / state.tickMs, 1);
+  render(alpha);
+  updateHud();
+  window.requestAnimationFrame(animationFrame);
+}
+
 function restart() {
   state = createInitialState({
     width: BOARD_WIDTH,
@@ -136,8 +200,11 @@ function restart() {
     seed: String(Date.now()),
     tickMs: getTickMs(),
   });
+  previousSnake = state.snake.map((segment) => ({ ...segment }));
+  lastStepAt = performance.now();
   startLoop();
-  render();
+  render(1);
+  updateHud();
 }
 
 function applyDirection(direction) {
@@ -155,7 +222,7 @@ function handleKeyboard(event) {
   if (event.key === " " || event.key === "p" || event.key === "P") {
     event.preventDefault();
     state = togglePause(state);
-    render();
+    updateHud();
   }
   if (event.key === "r" || event.key === "R") {
     event.preventDefault();
@@ -165,14 +232,15 @@ function handleKeyboard(event) {
 
 function gameLoop() {
   const prev = state;
+  previousSnake = state.snake.map((segment) => ({ ...segment }));
   state = step(state);
+  lastStepAt = performance.now();
   if (state.score > prev.score) {
     playEatSound();
   }
   if (!prev.gameOver && state.gameOver) {
     playFailSound();
   }
-  render();
 }
 
 function startLoop() {
@@ -187,7 +255,7 @@ restartBtn.addEventListener("click", restart);
 pauseBtn.addEventListener("click", () => {
   ensureAudioContext();
   state = togglePause(state);
-  render();
+  updateHud();
 });
 difficultyEl?.addEventListener("change", () => {
   ensureAudioContext();
@@ -204,5 +272,7 @@ mobileButtons.forEach((button) => {
   });
 });
 
-render();
+render(1);
+updateHud();
 startLoop();
+window.requestAnimationFrame(animationFrame);
