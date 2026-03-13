@@ -1,0 +1,100 @@
+:root {
+  color-scheme: light;
+  font-family: sans-serif;
+  background: #f4f4f4;
+  color: #222;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.app {
+  width: min(92vw, 430px);
+  display: grid;
+  gap: 12px;
+}
+
+.hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.hud h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.stats {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-size: 0.95rem;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  grid-template-rows: repeat(var(--rows), var(--cell));
+  border: 1px solid #333;
+  background: #fff;
+}
+
+.cell {
+  border: 1px solid #eee;
+}
+
+.cell.snake {
+  background: #2d7d3e;
+  border-radius: 50%;
+}
+
+.cell.food {
+  background: #c22;
+  border-radius: 50%;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+button {
+  padding: 8px 12px;
+  border: 1px solid #333;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+select {
+  padding: 8px 10px;
+  border: 1px solid #333;
+  background: #fff;
+  color: #111;
+}
+
+.mobile-controls {
+  display: none;
+  gap: 8px;
+}
+
+.mobile-row {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .mobile-controls {
+    display: grid;
+  }
+}

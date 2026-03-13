@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hud">
+        <h1>Snake</h1>
+        <div class="stats">
+          <span>Score: <strong id="score">0</strong></span>
+          <span id="status">Running</span>
+        </div>
+      </header>
+
+      <section class="game">
+        <div id="board" class="board" aria-label="Snake board"></div>
+      </section>
+
+      <section class="controls">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button id="restart" type="button">Restart</button>
+        <button id="pause" type="button">Pause</button>
+      </section>
+
+      <section class="mobile-controls" aria-label="Directional controls">
+        <button data-dir="up" type="button">Up</button>
+        <div class="mobile-row">
+          <button data-dir="left" type="button">Left</button>
+          <button data-dir="down" type="button">Down</button>
+          <button data-dir="right" type="button">Right</button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
